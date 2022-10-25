@@ -20,7 +20,7 @@ var upload = multer({ storage: storage })
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'PropsRow' });
+  res.render('index', { title: 'The Importer' });
 });
 
 router.post('/submit-sheet',upload.single('spreadsheet'), async(req,res,next)=>{

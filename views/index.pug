@@ -17,12 +17,13 @@ block content
       li e-commerce
       li products
       li tickets
+  h2 You must use the Objects ID and not the label!
   p If you have any questions or run into any weird errors, please get in touch with #[a(href="mailto:matt@aptitude8.com") Matt] or #[a(href="mailto:thomas@aptitude8.com") Thomas].
   form(action='/submit-sheet', method='POST',enctype="multipart/form-data")
     label
       | Spreadsheet in XLSX format:
       input(type='file' name='spreadsheet' accept=".xlsx" required)
     label
-      | API Token:
+      | OAuth Token:
       input(type="password" name="token" required)
     input(type='submit', value='Submit')

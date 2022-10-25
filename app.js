@@ -6,8 +6,16 @@ var logger = require('morgan');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+const fs = require("fs");
 
 var app = express();
+
+try{
+  fs.mkdirSync(path.join(__dirname, '/docs'));
+}
+catch(err){
+  if (err.code !== "EEXIST") throw err;
+}
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

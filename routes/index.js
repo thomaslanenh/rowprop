@@ -5,6 +5,7 @@ const fs = require("fs");
 const multer  = require('multer')
 const {diskStorage} = require("multer");
 var path = require('path');
+var axios = require('axios');
 
 var storage = multer.diskStorage({
     destination: function (req,res,cb){
@@ -23,6 +24,7 @@ router.get('/', function(req, res, next) {
 });
 
 router.post('/submit-sheet',upload.single('spreadsheet'), async(req,res,next)=>{
+
   const schema = {
     'Label': {
       prop: 'label',
@@ -77,60 +79,146 @@ router.post('/submit-sheet',upload.single('spreadsheet'), async(req,res,next)=>{
     }
   }
 
-  readXlsxFile(fs.createReadStream(req.file.path), {schema}).then(async ({rows, errors}) => {
-      for (const row of rows) {
+  let groupNameStorage = [];
+  let existingGroups = [];
+  let results = {
+      propertiesSkipped : [],
+        propertiesAdded : []
+  }
 
-          let propertyGroupLabel = row.groupName;
-          let propertyGroupName = propertyGroupLabel.replace(/\W+/g, '_').toLowerCase();
-          let groupFound = null;
+
+  const initGroups = async (groups) => {
+
+      if (existingGroups.find(e => e === groups.name.toString())) {
+          console.log('Group ' + groups.name + ' found in already parsed list');
+          return true;
+      } else {
+          console.log('group: ' + groups.name + ' not found as already parsed, searching in HS')
+          let propertyGroupLabel = groups.name;
+          let propertyGroupName = groups.name.replace(/\W+/g, '_').toLowerCase();
+          console.log('send in group name: ' + propertyGroupName);
 
           try {
-              // Look at the groups
-              const getGroups = await fetch(`https://api.hubspot.com/crm/v3/properties/${row.objectType}/groups`, {
+              // see if group exists via API call
+
+
+              var config = {
+                  method: 'get',
+                  url: `https://api.hubspot.com/crm/v3/properties/${groups.object}/groups`,
                   headers: {
-                      "Authorization": `Bearer ${req.body.token}`
+                      'Authorization': `Bearer ${req.body.token}`,
+                      'Content-Type': 'application/json',
                   }
-              });
+              };
 
-              const body = await getGroups.json();
+              const getGroups = await axios(config);
 
-              console.log(body);
-
-              if (body.results.find(element => element.name === propertyGroupName)) {
-                groupFound = true;
-                res.send({
-                    found: "GroupName found."
-                })
-                  // write logic to create properties
+              // see if group was found
+              if (getGroups.data.results.find(element => element.name === propertyGroupName)) {
+                  console.log('group found in hubspot: ' + groups.name)
+                  existingGroups.push(groups.name.toString())
+                  return existingGroups;
               } else {
+
+                  console.log('group not found in HubSpot, attempting to create');
 
                   var groupData = JSON.stringify({
                       "name": propertyGroupName,
                       "label": propertyGroupLabel
                   });
 
-                  const createGroup = await fetch(`https://api.hubspot.com/crm/v3/properties/${row.objectType}/groups`, {
-                      method: "POST",
-                      headers: {"Authorization": `Bearer ${req.body.token}`, "Content-Type": "application/json"},
-                      body: groupData
-                  });
+                  var config2 = {
+                      method: 'post',
+                      url: `https://api.hubspot.com/crm/v3/properties/${groups.object}/groups`,
+                      headers: {
+                          'Authorization': `Bearer ${req.body.token}`,
+                          'Content-Type': 'application/json',
+                      },
+                      data: groupData
+                  };
 
+                  const createGroup = await axios(config2);
 
-                  if (createGroup.status != 400) {
+                  console.log(createGroup.status);
+                  if (createGroup.status === 201) {
                       // create succesful, start propertie makes
-
-                      res.send({found: true, created: true})
+                      existingGroups.push(groups.name.toString());
+                     return existingGroups;
                   } else {
                       // create error, send alert
-                      res.status(400).send({error: "An error has occured creating group names. Check the Group Name to ensure no illegal characters such as $!^@% etc."})
+                      throw "An error has occurred creating group names. Check that the Group Name has no illegal characters in it.";
+
                   }
               }
-          } catch (e) {
-              console.log(e);
 
-              res.send({message: "error", error: e})
+          } catch (e) {
+                res.status(400).send({error: e})
           }
       }
+  }
+
+
+  readXlsxFile(fs.createReadStream(req.file.path), {schema}).then(async ({rows, errors}) => {
+
+      for (const row of rows){
+          groupNameStorage.push({name: row.groupName, object: row.objectType})
+      };
+
+      for (const group of groupNameStorage){
+          await initGroups(group);
+      }
+
+      console.log('row length: ' + rows.length)
+
+      for (const row of rows) {
+
+          let propertyLabel = row.label;
+          let propertyName = propertyLabel.replace(/\W+/g, '_').toLowerCase();
+          let propertyFieldType = row.fieldType;
+          let propertyType = row.type;
+          let objectType = row.objectType;
+          let propertyGroupName = row.groupName.replace(/\W+/g, '_').toLowerCase();
+
+          try {
+              console.log('Property Create Process Started For: ' + propertyLabel);
+
+              var groupData2 = JSON.stringify({
+                  "name": propertyName,
+                  "label": propertyLabel,
+                  "groupName": propertyGroupName,
+                  "type": propertyType,
+                  "fieldType": propertyFieldType
+              });
+
+              const config3 = {
+                  method: 'post',
+                  url: `https://api.hubspot.com/crm/v3/properties/${objectType}`,
+                  headers: {
+                      'Authorization': `Bearer ${req.body.token}`,
+                      'Content-Type': 'application/json',
+                  },
+                  data: groupData2
+              };
+
+              const createProperty = await axios(config3);
+
+              if (createProperty.status === 201){
+                  console.log('Creation success.');
+                  results.propertiesAdded.push({property: propertyLabel, createdName: propertyName, group: propertyGroupName, type: propertyType, fieldtype: propertyFieldType });
+              }
+
+          }catch(e){
+              console.log(e.response.data.message)
+              results.propertiesSkipped.push({property: propertyLabel, reason: e.response.data.message});
+          }
+      }
+  }).then((e)=>{
+      fs.unlinkSync(req.file.path);
+
+      res.status(200).send({message: 'Properties Successfully Created (Or Skipped if Existing)',
+        skipped: results.propertiesSkipped, created: results.propertiesAdded})})
+      .catch((e)=>{
+      res.status(400).send(e)
   })
 
 })

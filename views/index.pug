@@ -2,12 +2,21 @@ extends layout
 
 block content
   h1= title
+  i This tool takes a XLSX file and transfers it into HubSpot properties.
   h3 #[a(href="/Importer Blank.xlsx") Blank Spreadsheet Template]
-  p This tool takes a XLSX file and transfers it into HubSpot properties. There are some limitations to this though:
+  p The following property types aren't currently suppported:
     ol
-      li Enumeration isn't supported at this time.
-      li Bool, booleancheckbox, calculation_equation and checkboxes do not work as of this moment.
-      li Does not (as of this moment) create custom objects
+      li Calculation Equations
+      li Boolean Checkboxes
+      li Checkbox
+      li Radio
+      li Select (aka Drop Downs)
+  p Other limitations:
+    ol
+      li Does not create custom objects.
+      li #[strong You MUST use the Object Type's ID and not the object type's label on the spreadsheet! i.e. 0-1 instead of "Contacts"].
+      i You can find it by going to your object in HubSpot then looking at the url. For example if you have the url https://app.hubspot.com/contacts/22311609/objects/2-7916663/views/all/list for object "Planets" then the  object type ID would be #[strong 2-7916663].
+      li This applet will auto-generate a name for your property and group.
   p The API Requires the following scopes:
     ol
       li contacts
@@ -16,10 +25,10 @@ block content
       li deals
       li e-commerce
       li products
+      li properties
       li tickets
-  p plus any other scopes you need to interact with the object.
-  h2 You must use the Object Type's ID and not the object type's label on the spreadsheet! i.e. 0-1 instead of "Contacts"
-  i You can find it by going to your object in HubSpot then looking at the url. For example if you have the url https://app.hubspot.com/contacts/22311609/objects/2-7916663/views/all/list for object "Planets" then the  object type ID would be #[strong 2-7916663]
+  p plus any other scopes you need wherein you will have to interact with the object.
+  hr
   p If you have any questions or run into any weird errors, please get in touch with #[a(href="mailto:matt@aptitude8.com") Matt] or #[a(href="mailto:thomas@aptitude8.com") Thomas].
   form(action='/submit-sheet', method='POST',enctype="multipart/form-data")
     label

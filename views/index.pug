@@ -17,7 +17,7 @@ block content
   form(action='/submit-sheet', method='POST',enctype="multipart/form-data")
     label
       | Spreadsheet in XLSX format:
-      input(type='file' name='spreadsheet' required)
+      input(type='file' name='spreadsheet' accept=".xlsx" required)
     label
       | API Token:
       input(type="password" name="token" required)

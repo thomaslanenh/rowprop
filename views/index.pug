@@ -2,12 +2,16 @@ extends layout
 
 block content
   h1= title
-  p Welcome to #{title}
+  p This tool takes a XLSX file and transfers it into HubSpot properties. There are some limitations to this though:
+    ol
+      li Enumeration isn't supported at this time.
+      li Does not (as of this moment) create custom objects
+  p If you have any questions or run into any weird errors, please get in touch with #[a(href="mailto:matt@aptitude8.com") Matt] or #[a(href="mailto:thomas@aptitude8.com") Thomas].
   form(action='/submit-sheet', method='POST',enctype="multipart/form-data")
     label
       | Spreadsheet in XLSX format:
       input(type='file' name='spreadsheet' required)
     label
-      | API Token
+      | API Token:
       input(type="password" name="token" required)
     input(type='submit', value='Submit')

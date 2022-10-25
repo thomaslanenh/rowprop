@@ -19,12 +19,10 @@ var upload = multer({ storage: storage })
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Express' });
+  res.render('index', { title: 'PropsRow' });
 });
 
 router.post('/submit-sheet',upload.single('spreadsheet'), async(req,res,next)=>{
-    console.log(req.file.filename)
-    console.log(req.file.mimetype);
   const schema = {
     'Label': {
       prop: 'label',

@@ -6,13 +6,17 @@ block content
   p This tool takes a XLSX file and transfers it into HubSpot properties. There are some limitations to this though:
     ol
       li Enumeration isn't supported at this time.
+      li Bool, booleancheckbox, calculation_equation and checkboxes do not work as of this moment.
       li Does not (as of this moment) create custom objects
-      li The API Requires the following scopes:
-        li tickets
-        li e-commerce
-        li contacts
-        li companies
-        li custom objects
+  p The API Requires the following scopes:
+    ol
+      li contacts
+      li companies
+      li custom objects
+      li deals
+      li e-commerce
+      li products
+      li tickets
   p If you have any questions or run into any weird errors, please get in touch with #[a(href="mailto:matt@aptitude8.com") Matt] or #[a(href="mailto:thomas@aptitude8.com") Thomas].
   form(action='/submit-sheet', method='POST',enctype="multipart/form-data")
     label

@@ -40,6 +40,7 @@ router.post('/submit-sheet',upload.single('spreadsheet'), async(req,res,next)=>{
           'bool',
           'date',
           'dateTime',
+          'datetime',
           'enumeration'
       ],
         required: true

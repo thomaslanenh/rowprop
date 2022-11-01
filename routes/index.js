@@ -153,13 +153,46 @@ router.post('/submit-sheet',upload.single('spreadsheet'), async(req,res,next)=>{
               }
 
           } catch (e) {
-                res.status(400).send({error: e})
+              console.log('error: ' + e.error.status)
+              if (e.error.status === 403){
+                  res.status(400).send({error: "An error has occurred. Make sure your token has all the necessary scopes required."})
+              }else {
+                  res.status(400).send({error: e})
+              }
           }
       }
   }
 
+  const getEnumOptions = async (propertyLabel) => {
+      let map = {
+          "Property": 'property',
+          "Description": 'description',
+          "Label": 'label',
+          "Value": 'value'
+      }
 
-  readXlsxFile(fs.createReadStream(req.file.path), {schema}).then(async ({rows, errors}) => {
+      let options = await readXlsxFile(fs.createReadStream(req.file.path), {map, sheet: 3}).then(async (data) => {
+          let newObj = []
+          for (const enu of data.rows) {
+
+              if (enu.property === propertyLabel) {
+                  newObj.push({
+                      "label": `${enu.label}`,
+                      "description": `${enu.description}`,
+                      "value": `${enu.value}`
+                  })
+
+              }
+
+          }
+          return newObj;
+      })
+      console.log('options is: ' + options)
+
+      return options;
+  }
+
+  readXlsxFile(fs.createReadStream(req.file.path), {schema, sheet: 1}).then(async ({rows, errors}) => {
 
       for (const row of rows){
           groupNameStorage.push({name: row.groupName, object: row.objectType})
@@ -183,30 +216,70 @@ router.post('/submit-sheet',upload.single('spreadsheet'), async(req,res,next)=>{
           try {
               console.log('Property Create Process Started For: ' + propertyLabel);
 
-              var groupData2 = JSON.stringify({
-                  "name": propertyName,
-                  "label": propertyLabel,
-                  "groupName": propertyGroupName,
-                  "type": propertyType,
-                  "fieldType": propertyFieldType
-              });
 
-              const config3 = {
-                  method: 'post',
-                  url: `https://api.hubspot.com/crm/v3/properties/${objectType}`,
-                  headers: {
-                      'Authorization': `Bearer ${req.body.token}`,
-                      'Content-Type': 'application/json',
-                  },
-                  data: groupData2
-              };
+              if (propertyType === "enumeration"){
+                  console.log('setting up enum');
 
-              const createProperty = await axios(config3);
+                let options = await getEnumOptions(propertyLabel);
 
-              if (createProperty.status === 201){
-                  console.log('Creation success.');
-                  results.propertiesAdded.push({property: propertyLabel, createdName: propertyName, group: propertyGroupName, type: propertyType, fieldtype: propertyFieldType });
+                console.log('test run: ' + options);
+                  var groupDataEnum = JSON.stringify({
+                      "name": propertyName,
+                      "label": propertyLabel,
+                      "groupName": propertyGroupName,
+                      "type": propertyType,
+                      "fieldType": propertyFieldType,
+                      "options": await getEnumOptions(propertyLabel)
+                  });
+
+
+                  const config3 = {
+                      method: 'post',
+                      url: `https://api.hubspot.com/crm/v3/properties/${objectType}`,
+                      headers: {
+                          'Authorization': `Bearer ${req.body.token}`,
+                          'Content-Type': 'application/json',
+                      },
+                      data: groupDataEnum
+                  };
+
+                  const createProperty = await axios(config3);
+
+                  if (createProperty.status === 201){
+                      console.log('Creation success.');
+                      results.propertiesAdded.push({property: propertyLabel, createdName: propertyName, group: propertyGroupName, type: propertyType, fieldtype: propertyFieldType });
+                  }
+
+
               }
+              else {
+                  var groupData2 = JSON.stringify({
+                      "name": propertyName,
+                      "label": propertyLabel,
+                      "groupName": propertyGroupName,
+                      "type": propertyType,
+                      "fieldType": propertyFieldType
+                  });
+
+                  const config3 = {
+                      method: 'post',
+                      url: `https://api.hubspot.com/crm/v3/properties/${objectType}`,
+                      headers: {
+                          'Authorization': `Bearer ${req.body.token}`,
+                          'Content-Type': 'application/json',
+                      },
+                      data: groupData2
+                  };
+
+                  const createProperty = await axios(config3);
+
+                  if (createProperty.status === 201){
+                      console.log('Creation success.');
+                      results.propertiesAdded.push({property: propertyLabel, createdName: propertyName, group: propertyGroupName, type: propertyType, fieldtype: propertyFieldType });
+                  }
+              }
+
+
 
           }catch(e){
               console.log(e.response.data.message)
@@ -217,9 +290,13 @@ router.post('/submit-sheet',upload.single('spreadsheet'), async(req,res,next)=>{
       fs.unlinkSync(req.file.path);
 
       res.status(200).send({message: 'Properties Successfully Created (Or Skipped if Existing)',
-        skipped: results.propertiesSkipped, created: results.propertiesAdded})})
-      .catch((e)=>{
-      res.status(400).send(e)
+        skipped: results.propertiesSkipped, created: results.propertiesAdded})
+  })
+  .catch((e)=>{
+      console.log(e)
+      res.status(400).send({
+          error: e
+      })
   })
 
 })

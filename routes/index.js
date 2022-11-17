@@ -31,6 +31,11 @@ router.post('/submit-sheet',upload.single('spreadsheet'), async(req,res,next)=>{
       type: String,
         required: true
     },
+    'Value': {
+        prop: "valueField",
+        type: String,
+        required: false
+    },
     'Type': {
       prop: 'type',
       type: String,
@@ -207,7 +212,8 @@ router.post('/submit-sheet',upload.single('spreadsheet'), async(req,res,next)=>{
       for (const row of rows) {
 
           let propertyLabel = row.label;
-          let propertyName = propertyLabel.replace(/\W+/g, '_').toLowerCase();
+          //let propertyName = propertyLabel.replace(/\W+/g, '_').toLowerCase();
+          let propertyValue = row.valueField ? row.valueField : propertyLabel.replace(/\W+/g, '_').toLowerCase();
           let propertyFieldType = row.fieldType;
           let propertyType = row.type;
           let objectType = row.objectType;
@@ -224,7 +230,7 @@ router.post('/submit-sheet',upload.single('spreadsheet'), async(req,res,next)=>{
 
                 console.log('test run: ' + options);
                   var groupDataEnum = JSON.stringify({
-                      "name": propertyName,
+                      "name": propertyValue,
                       "label": propertyLabel,
                       "groupName": propertyGroupName,
                       "type": propertyType,
@@ -247,14 +253,14 @@ router.post('/submit-sheet',upload.single('spreadsheet'), async(req,res,next)=>{
 
                   if (createProperty.status === 201){
                       console.log('Creation success.');
-                      results.propertiesAdded.push({property: propertyLabel, createdName: propertyName, group: propertyGroupName, type: propertyType, fieldtype: propertyFieldType });
+                      results.propertiesAdded.push({property: propertyLabel, createdName: propertyValue, group: propertyGroupName, type: propertyType, fieldtype: propertyFieldType });
                   }
 
 
               }
               else {
                   var groupData2 = JSON.stringify({
-                      "name": propertyName,
+                      "name": propertyValue,
                       "label": propertyLabel,
                       "groupName": propertyGroupName,
                       "type": propertyType,
@@ -275,7 +281,7 @@ router.post('/submit-sheet',upload.single('spreadsheet'), async(req,res,next)=>{
 
                   if (createProperty.status === 201){
                       console.log('Creation success.');
-                      results.propertiesAdded.push({property: propertyLabel, createdName: propertyName, group: propertyGroupName, type: propertyType, fieldtype: propertyFieldType });
+                      results.propertiesAdded.push({property: propertyLabel, createdName: propertyValue, group: propertyGroupName, type: propertyType, fieldtype: propertyFieldType });
                   }
               }
 
